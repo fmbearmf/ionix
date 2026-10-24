@@ -5,7 +5,7 @@
 
 let
   t = ionix.html.tags;
-  inherit (ionix) ui;
+  inherit (ionix) ui css;
 
   colors = {
     background = "#10151f";
@@ -34,16 +34,17 @@ let
     t.article
       {
         styles = [
-          ui.flex
-          ui.column
-          {
-            background-color = colors.surface;
-            border = "1px solid ${colors.border}";
-            border-radius = "16px";
-            padding = "1.5rem";
-            gap = "0.75rem";
-            line-height = "1.6";
-          }
+          (css.display "flex")
+          (css.direction "column")
+          (css.background (css.hex colors.surface))
+          (css.border {
+            width = css.px 1;
+            color = css.hex colors.border;
+          })
+          (css.radius (css.px 16))
+          (css.padding (css.rem 1.5))
+          (css.gap (css.rem 0.75))
+          (css.lineHeight 1.6)
         ];
       }
       [

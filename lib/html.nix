@@ -26,26 +26,10 @@ let
 
   fragment = value: { _ionixHTML = value; };
 
-  # A deliberately small declaration language: literal CSS properties/values,
-  # no selectors or rules. Later sets override earlier sets per property.
-  declarations =
-    styles:
-    if !builtins.isList styles || !lib.all builtins.isAttrs styles then
-      throw "Ionix CSS: styles must be a list of declaration sets"
-    else
-      lib.concatStrings (
-        lib.mapAttrsToList (
-          property: value:
-          if builtins.match "(--[A-Za-z0-9_-]+|[a-z][a-z0-9-]*)" property == null then
-            throw "Ionix CSS: invalid property '${property}'"
-          else if !(builtins.isString value || builtins.isInt value || builtins.isFloat value) then
-            throw "Ionix CSS: '${property}' must have a string or numeric value"
-          else if toString value == "" || builtins.match ".*[;{}<>\n\r].*" (toString value) != null then
-            throw "Ionix CSS: invalid value for '${property}'"
-          else
-            "${property}:${toString value};"
-        ) (lib.foldl' (a: b: a // b) { } styles)
-      );
+  # validation of the HTML render and CSS manifest
+  css = import ./css.nix { inherit lib; };
+
+  inherit (css) declarations;
 
   styledAttrs =
     attributes:
@@ -174,6 +158,9 @@ let
 in
 {
   inherit escape render el;
+
+  stylesheet = rules: el "style" { } (fragment (css.stylesheet rules));
+
   toNative = tree;
   encodeNative = wire;
 

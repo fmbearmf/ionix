@@ -3,6 +3,8 @@
 let
   html = import ./html.nix { inherit lib; };
   ui = import ./ui.nix;
+  css = import ./css.nix { inherit lib; };
+  semantic = import ./semantic.nix { inherit lib; };
   cssEngine = pkgs: pkgs.callPackage ../native { };
 
   validPath =
@@ -41,6 +43,8 @@ in
   inherit
     html
     ui
+    css
+    semantic
     routeToPath
     cssEngine
     ;
@@ -88,6 +92,7 @@ in
             inherit
               html
               ui
+              css
               site
               page
               ;

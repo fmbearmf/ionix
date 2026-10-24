@@ -23,6 +23,17 @@
         }
       );
 
+      checks = eachSystem (
+        system: pkgs: {
+          library =
+            assert import ./tests { inherit (inputs.nixpkgs) lib; };
+            pkgs.runCommand "ionix-library-tests" { } ''
+              touch "$out"
+            '';
+          example-site = import ./examples/site { inherit pkgs ionix; };
+        }
+      );
+
       devShells = eachSystem (
         system: pkgs: {
           default = pkgs.mkShell {
