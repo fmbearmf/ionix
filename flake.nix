@@ -15,11 +15,21 @@
     {
       lib = ionix;
 
+      packages = eachSystem (
+        system: pkgs: {
+          css-engine = ionix.cssEngine pkgs;
+          example-site = import ./examples/site { inherit pkgs ionix; };
+          default = ionix.cssEngine pkgs;
+        }
+      );
+
       devShells = eachSystem (
         system: pkgs: {
           default = pkgs.mkShell {
             packages = [
               pkgs.nixfmt
+              pkgs.stdenv.cc
+              pkgs.clang-tools
               pkgs.python3
             ];
           };

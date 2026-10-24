@@ -2,6 +2,8 @@
 
 let
   html = import ./html.nix { inherit lib; };
+  ui = import ./ui.nix;
+  cssEngine = pkgs: pkgs.callPackage ../native { };
 
   validPath =
     path:
@@ -36,7 +38,12 @@ let
   xml = html.escape;
 in
 {
-  inherit html routeToPath;
+  inherit
+    html
+    ui
+    routeToPath
+    cssEngine
+    ;
 
   mkSite =
     {
@@ -77,7 +84,15 @@ in
       renderPage =
         page:
         let
-          context = { inherit html site page; };
+          context = {
+            inherit
+              html
+              ui
+              site
+              page
+              ;
+          };
+
           content = if builtins.isFunction page.body then page.body context else page.body;
 
           pageTitle = if page.title == title then title else "${page.title} · ${title}";
@@ -85,8 +100,7 @@ in
 
           extraHead = page.head or [ ];
         in
-        "<!doctype html>\n"
-        + html.render (
+        html.toNative (
           t.html { inherit lang; } [
             (t.head { } [
               (t.meta { charset = "utf-8"; } [ ])
@@ -124,15 +138,17 @@ in
 
             (t.body { } (layout (context // { inherit content; })))
           ]
-        )
-        + "\n";
+        );
 
-      pageFiles = builtins.listToAttrs (
-        map (page: {
-          name = routeToPath page.route;
-          value = renderPage page;
-        }) pages
+      manifest = pkgs.writeText "ionix-pages" (
+        html.encodeNative (
+          map (page: [
+            (routeToPath page.route)
+            (renderPage page)
+          ]) pages
+        )
       );
+
       sitemapContent = ''
         <?xml version="1.0" encoding="UTF-8"?>
         <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${
@@ -149,8 +165,7 @@ in
       '';
 
       generated =
-        pageFiles
-        // lib.optionalAttrs sitemap { "sitemap.xml" = sitemapContent; }
+        lib.optionalAttrs sitemap { "sitemap.xml" = sitemapContent; }
         // lib.optionalAttrs robots {
           "robots.txt" =
             "User-agent: *\nAllow: /\n" + lib.optionalString sitemap "Sitemap: ${origin}/sitemap.xml\n";
@@ -199,21 +214,28 @@ in
       throw "Ionix: duplicate route or output path"
     else if !lib.all validPath allPaths then
       throw "Ionix: output paths must be safe relative paths"
+    else if lib.any (path: path == "_ionix" || lib.hasPrefix "_ionix/" path) allPaths then
+      throw "Ionix: '_ionix/' is reserved for generated assets"
     else if !noPrefixes then
       throw "Ionix: output file/directory collision"
     else
       pkgs.runCommand name
         {
+          nativeBuildInputs = [ (cssEngine pkgs.buildPackages) ];
           preferLocalBuild = true;
           allowSubstitutes = false;
 
           passthru = {
             inherit routes;
+
+            # content-addressed by the build step
             outputPaths = allPaths;
+            cssAssetDirectory = "_ionix/css";
           };
         }
         ''
           mkdir -p "$out"
+          ionix-css ${manifest} "$out"
           ${lib.concatStrings (lib.mapAttrsToList install sources)}
 
           find "$out" -exec touch -h -d @1 {} +

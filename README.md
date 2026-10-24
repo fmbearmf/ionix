@@ -1,6 +1,6 @@
 # Ionix
 
-TODO: this
+A Nix-native static web framework.
 
 ## License
 
